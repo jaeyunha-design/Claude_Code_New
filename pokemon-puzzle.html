@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokemon Puzzle Quest - Match-3 Adventure!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --pokemon-yellow: #FFCB05;
+            --pokemon-blue: #3D7DCA;
+            --pokemon-red: #FF0000;
+            --pokeball-white: #FFFFFF;
+            --fire-red: #F08030;
+            --water-blue: #6890F0;
+            --grass-green: #78C850;
+            --electric-yellow: #F8D030;
+            --psychic-pink: #F85888;
+            --ghost-purple: #705898;
+            --dark-bg: #1a1a2e;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: var(--dark-bg);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* Particle Background */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: radial-gradient(circle, rgba(255,203,5,0.8) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 15s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* Pokeball floating elements */
+        .pokeball-float {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, #ff0000 50%, #fff 50%);
+            border: 3px solid #222;
+            animation: pokefloat 20s infinite ease-in-out;
+            opacity: 0.3;
+        }
+
+        .pokeball-float::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border: 3px solid #222;
+            border-radius: 50%;
+        }
+
+        @keyframes pokefloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-30px) rotate(90deg); }
+            50% { transform: translateY(0) rotate(180deg); }
+            75% { transform: translateY(30px) rotate(270deg); }
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 1rem 2rem;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--pokemon-yellow);
+            transition: all 0.3s ease;
+        }
+
+        nav.scrolled {
+            padding: 0.5rem 2rem;
+            box-shadow: 0 5px 30px rgba(255, 203, 5, 0.3);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.8rem;
+            background: linear-gradient(45deg, var(--pokemon-yellow), var(--fire-red));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(255, 203, 5, 0.5);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 5px var(--pokemon-yellow)); }
+            to { filter: drop-shadow(0 0 20px var(--pokemon-yellow)); }
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--pokemon-yellow);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-links a:hover {
+            color: var(--pokemon-yellow);
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .mobile-menu-btn span {
+            width: 25px;
+            height: 3px;
+            background: var(--pokemon-yellow);
+            transition: all 0.3s ease;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 100px 2rem 2rem;
+            background:
+                radial-gradient(ellipse at top, rgba(102, 126, 234, 0.3) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom, rgba(118, 75, 162, 0.3) 0%, transparent 50%),
+                var(--dark-bg);
+            overflow: hidden;
+        }
+
+        .hero-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-text h1 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 4rem;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(45deg, var(--pokemon-yellow), #fff, var(--pokemon-yellow));
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shine 3s linear infinite;
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        .hero-text p {
+            font-size: 1.3rem;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 1rem 2.5rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--pokemon-yellow), var(--fire-red));
+            color: #1a1a2e;
+            box-shadow: 0 10px 30px rgba(255, 203, 5, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 203, 5, 0.6);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid var(--pokemon-yellow);
+        }
+
+        .btn-secondary:hover {
+            background: var(--pokemon-yellow);
+            color: #1a1a2e;
+            transform: translateY(-3px);
+        }
+
+        .store-badges {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .store-badge {
+            height: 50px;
+            border-radius: 10px;
+            transition: transform 0.3s ease;
+            background: #000;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+        }
+
+        .store-badge:hover {
+            transform: scale(1.05);
+        }
+
+        .store-badge svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .store-badge-text {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.7rem;
+        }
+
+        .store-badge-text span:last-child {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .hero-image {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hero-pokemon-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .hero-glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255,203,5,0.4) 0%, transparent 70%);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+        }
+
+        .hero-pokemon {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .pokemon-hero-card {
+            width: 150px;
+            height: 200px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border-radius: 20px;
+            border: 2px solid rgba(255,203,5,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            animation: heroFloat 4s ease-in-out infinite;
+            backdrop-filter: blur(10px);
+        }
+
+        .pokemon-hero-card:nth-child(1) { animation-delay: 0s; }
+        .pokemon-hero-card:nth-child(2) { animation-delay: 0.5s; transform: translateY(-20px); }
+        .pokemon-hero-card:nth-child(3) { animation-delay: 1s; }
+
+        @keyframes heroFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .pokemon-hero-card:nth-child(2) {
+            animation-name: heroFloat2;
+        }
+
+        @keyframes heroFloat2 {
+            0%, 100% { transform: translateY(-20px); }
+            50% { transform: translateY(-35px); }
+        }
+
+        .pokemon-emoji {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .pokemon-hero-name {
+            font-family: 'Fredoka One', cursive;
+            font-size: 0.9rem;
+            color: var(--pokemon-yellow);
+        }
+
+        /* Sparkle Effects */
+        .sparkle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: white;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            animation: sparkle 2s ease-in-out infinite;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: scale(1) rotate(180deg); opacity: 1; }
+        }
+
+        /* Features Section */
+        .features {
+            padding: 6rem 2rem;
+            background: linear-gradient(180deg, var(--dark-bg) 0%, #16213e 100%);
+            position: relative;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-header h2 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, var(--pokemon-yellow), var(--electric-yellow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-header p {
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.7);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+            border-radius: 24px;
+            padding: 2.5rem;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-1);
+            transform: scaleX(0);
+            transition: transform 0.4s ease;
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--pokemon-yellow);
+            box-shadow: 0 20px 40px rgba(255, 203, 5, 0.2);
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            position: relative;
+        }
+
+        .feature-icon.match-3 { background: linear-gradient(135deg, var(--psychic-pink), var(--ghost-purple)); }
+        .feature-icon.collection { background: linear-gradient(135deg, var(--pokemon-yellow), var(--fire-red)); }
+        .feature-icon.evolution { background: linear-gradient(135deg, var(--grass-green), var(--water-blue)); }
+        .feature-icon.abilities { background: linear-gradient(135deg, var(--electric-yellow), var(--pokemon-yellow)); }
+
+        .feature-card h3 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .feature-card p {
+            color: rgba(255,255,255,0.7);
+            line-height: 1.6;
+        }
+
+        /* Character Gallery */
+        .gallery {
+            padding: 6rem 2rem;
+            background:
+                radial-gradient(ellipse at center, rgba(248, 88, 136, 0.1) 0%, transparent 50%),
+                linear-gradient(180deg, #16213e 0%, var(--dark-bg) 100%);
+        }
+
+        .pokemon-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 2rem;
+        }
+
+        .pokemon-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            border-radius: 24px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.4s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pokemon-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(255,255,255,0.1),
+                transparent
+            );
+            transform: rotate(45deg);
+            transition: all 0.6s ease;
+            opacity: 0;
+        }
+
+        .pokemon-card:hover::before {
+            animation: cardShine 0.6s ease;
+        }
+
+        @keyframes cardShine {
+            0% { left: -50%; opacity: 1; }
+            100% { left: 150%; opacity: 0; }
+        }
+
+        .pokemon-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: var(--pokemon-yellow);
+            box-shadow:
+                0 20px 40px rgba(0,0,0,0.3),
+                0 0 30px rgba(255, 203, 5, 0.3);
+        }
+
+        .pokemon-image {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            position: relative;
+        }
+
+        .pokemon-image::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 20px;
+            background: radial-gradient(ellipse, rgba(0,0,0,0.3) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .pokemon-card:hover .pokemon-image {
+            animation: bounce 0.5s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .pokemon-name {
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .pokemon-type {
+            display: inline-block;
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .type-electric { background: var(--electric-yellow); color: #1a1a2e; }
+        .type-fire { background: var(--fire-red); color: white; }
+        .type-water { background: var(--water-blue); color: white; }
+        .type-grass { background: var(--grass-green); color: white; }
+        .type-psychic { background: var(--psychic-pink); color: white; }
+        .type-ghost { background: var(--ghost-purple); color: white; }
+        .type-normal { background: #A8A878; color: white; }
+        .type-dragon { background: #7038F8; color: white; }
+
+        .pokemon-rarity {
+            display: flex;
+            justify-content: center;
+            gap: 0.2rem;
+            margin-top: 0.5rem;
+        }
+
+        .star {
+            color: var(--pokemon-yellow);
+            font-size: 1rem;
+            text-shadow: 0 0 10px var(--pokemon-yellow);
+        }
+
+        .star.empty {
+            color: rgba(255,255,255,0.2);
+            text-shadow: none;
+        }
+
+        /* Gameplay Preview */
+        .gameplay {
+            padding: 6rem 2rem;
+            background: linear-gradient(180deg, var(--dark-bg) 0%, #0f0f23 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gameplay-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .gameplay-text h3 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--pokemon-yellow);
+        }
+
+        .gameplay-text p {
+            color: rgba(255,255,255,0.8);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+        }
+
+        .gameplay-features {
+            list-style: none;
+        }
+
+        .gameplay-features li {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .gameplay-features li::before {
+            content: '⚡';
+            font-size: 1.2rem;
+        }
+
+        .puzzle-board {
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            border-radius: 24px;
+            padding: 2rem;
+            border: 2px solid rgba(255,203,5,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+        }
+
+        .puzzle-piece {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .puzzle-piece::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%);
+            border-radius: 12px;
+        }
+
+        .puzzle-piece:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .puzzle-piece.fire { background: linear-gradient(135deg, #FF6B35, #F7931E); }
+        .puzzle-piece.water { background: linear-gradient(135deg, #4FC3F7, #0288D1); }
+        .puzzle-piece.grass { background: linear-gradient(135deg, #81C784, #388E3C); }
+        .puzzle-piece.electric { background: linear-gradient(135deg, #FFD54F, #FFA000); }
+        .puzzle-piece.psychic { background: linear-gradient(135deg, #F48FB1, #E91E63); }
+        .puzzle-piece.ghost { background: linear-gradient(135deg, #9575CD, #512DA8); }
+
+        .puzzle-piece.matched {
+            animation: match 0.5s ease forwards;
+        }
+
+        @keyframes match {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.5; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        /* Screenshots Gallery */
+        .screenshots {
+            margin-top: 4rem;
+        }
+
+        .screenshot-grid {
+            display: flex;
+            gap: 1.5rem;
+            overflow-x: auto;
+            padding: 1rem;
+            scroll-snap-type: x mandatory;
+        }
+
+        .screenshot-card {
+            min-width: 300px;
+            height: 400px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            border-radius: 24px;
+            border: 2px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            scroll-snap-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .screenshot-card:hover {
+            border-color: var(--pokemon-yellow);
+            transform: scale(1.02);
+        }
+
+        .screenshot-card .emoji {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .screenshot-card span {
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* News Section */
+        .news {
+            padding: 6rem 2rem;
+            background:
+                radial-gradient(ellipse at top right, rgba(79, 172, 254, 0.1) 0%, transparent 50%),
+                linear-gradient(180deg, #0f0f23 0%, var(--dark-bg) 100%);
+        }
+
+        .news-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .news-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.4s ease;
+        }
+
+        .news-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--pokemon-yellow);
+            box-shadow: 0 20px 40px rgba(255, 203, 5, 0.15);
+        }
+
+        .news-image {
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+        }
+
+        .news-image.event { background: var(--gradient-1); }
+        .news-image.release { background: var(--gradient-2); }
+        .news-image.campaign { background: var(--gradient-3); }
+
+        .news-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: var(--pokemon-yellow);
+            color: #1a1a2e;
+        }
+
+        .news-content {
+            padding: 1.5rem;
+        }
+
+        .news-date {
+            font-size: 0.85rem;
+            color: var(--pokemon-yellow);
+            margin-bottom: 0.5rem;
+        }
+
+        .news-title {
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .news-desc {
+            color: rgba(255,255,255,0.7);
+            line-height: 1.6;
+        }
+
+        /* CTA Section */
+        .cta {
+            padding: 6rem 2rem;
+            background:
+                linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%),
+                var(--dark-bg);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta h2 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, var(--pokemon-yellow), #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .cta p {
+            font-size: 1.3rem;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 2rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Footer */
+        footer {
+            background: #0a0a14;
+            padding: 4rem 2rem 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-section h4 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.2rem;
+            color: var(--pokemon-yellow);
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 0.8rem;
+        }
+
+        .footer-section ul li a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section ul li a:hover {
+            color: var(--pokemon-yellow);
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .social-link {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .social-link:hover {
+            background: var(--pokemon-yellow);
+            transform: translateY(-3px);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+        }
+
+        /* Scroll animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s ease;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 1024px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .hero-text h1 {
+                font-size: 3rem;
+            }
+
+            .hero-buttons {
+                justify-content: center;
+            }
+
+            .store-badges {
+                justify-content: center;
+            }
+
+            .gameplay-content {
+                grid-template-columns: 1fr;
+            }
+
+            .gameplay-text {
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: rgba(26, 26, 46, 0.98);
+                flex-direction: column;
+                padding: 2rem;
+                gap: 1.5rem;
+                text-align: center;
+                border-bottom: 2px solid var(--pokemon-yellow);
+            }
+
+            .nav-links.active {
+                display: flex;
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero-text p {
+                font-size: 1.1rem;
+            }
+
+            .pokemon-hero-card {
+                width: 100px;
+                height: 140px;
+            }
+
+            .pokemon-emoji {
+                font-size: 2.5rem;
+            }
+
+            .section-header h2 {
+                font-size: 2rem;
+            }
+
+            .puzzle-piece {
+                font-size: 1.2rem;
+            }
+
+            .cta h2 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-pokemon {
+                gap: 10px;
+            }
+
+            .pokemon-hero-card {
+                width: 80px;
+                height: 120px;
+                padding: 0.5rem;
+            }
+
+            .pokemon-emoji {
+                font-size: 2rem;
+            }
+
+            .btn {
+                padding: 0.8rem 1.5rem;
+                font-size: 1rem;
+            }
+
+            .store-badges {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        /* Loading Animation */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--dark-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .pokeball-loader {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, #ff0000 50%, #fff 50%);
+            border: 5px solid #222;
+            position: relative;
+            animation: pokeballSpin 1s ease-in-out infinite;
+        }
+
+        .pokeball-loader::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border: 5px solid #222;
+            border-radius: 50%;
+        }
+
+        .pokeball-loader::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: #222;
+            transform: translateY(-50%);
+        }
+
+        @keyframes pokeballSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loader -->
+    <div class="loader" id="loader">
+        <div class="pokeball-loader"></div>
+    </div>
+
+    <!-- Particles Background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="nav-container">
+            <div class="logo">Pokemon Puzzle Quest</div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#pokemon">Pokemon</a></li>
+                <li><a href="#gameplay">Gameplay</a></li>
+                <li><a href="#news">News</a></li>
+            </ul>
+            <div class="mobile-menu-btn" id="mobileMenuBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <div class="hero-text reveal">
+                <h1>Catch, Match & Battle!</h1>
+                <p>Embark on an exciting puzzle adventure with your favorite Pokemon! Match gems, collect legendary creatures, and become the ultimate Pokemon Puzzle Master!</p>
+                <div class="hero-buttons">
+                    <a href="#" class="btn btn-primary">
+                        <span>⚡</span> Play Now
+                    </a>
+                    <a href="#features" class="btn btn-secondary">
+                        <span>📖</span> Learn More
+                    </a>
+                </div>
+                <div class="store-badges">
+                    <a href="#" class="store-badge">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 12.5c0-1.58-.79-2.97-2-3.81v-.69c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.69c-1.21.84-2 2.23-2 3.81 0 1.58.79 2.97 2 3.81v.69c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-.69c1.21-.84 2-2.23 2-3.81z"/></svg>
+                        <div class="store-badge-text">
+                            <span>Download on the</span>
+                            <span>App Store</span>
+                        </div>
+                    </a>
+                    <a href="#" class="store-badge">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5v-17c0-.59.34-1.11.84-1.35l9.16 9.35-9.16 9.35c-.5-.24-.84-.76-.84-1.35zm13.14-4.14l-2.78-2.78 2.78-2.78 3.14 1.82c.65.38.65 1.32 0 1.7l-3.14 1.82v.22z"/></svg>
+                        <div class="store-badge-text">
+                            <span>Get it on</span>
+                            <span>Google Play</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <div class="hero-image reveal">
+                <div class="hero-pokemon-container">
+                    <div class="hero-glow"></div>
+                    <div class="hero-pokemon">
+                        <div class="pokemon-hero-card">
+                            <div class="pokemon-emoji">🔥</div>
+                            <div class="pokemon-hero-name">Charizard</div>
+                        </div>
+                        <div class="pokemon-hero-card">
+                            <div class="pokemon-emoji">⚡</div>
+                            <div class="pokemon-hero-name">Pikachu</div>
+                        </div>
+                        <div class="pokemon-hero-card">
+                            <div class="pokemon-emoji">💧</div>
+                            <div class="pokemon-hero-name">Blastoise</div>
+                        </div>
+                    </div>
+                    <!-- Sparkles -->
+                    <div class="sparkle" style="top: 10%; left: 10%; animation-delay: 0s;"></div>
+                    <div class="sparkle" style="top: 20%; right: 15%; animation-delay: 0.5s;"></div>
+                    <div class="sparkle" style="bottom: 30%; left: 20%; animation-delay: 1s;"></div>
+                    <div class="sparkle" style="bottom: 20%; right: 10%; animation-delay: 1.5s;"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="section-header reveal">
+            <h2>Game Features</h2>
+            <p>Discover the exciting mechanics that make Pokemon Puzzle Quest the ultimate puzzle adventure!</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon match-3">🧩</div>
+                <h3>Match-3 Puzzle Fun</h3>
+                <p>Strategically match Pokemon gems in exciting puzzle battles. Create powerful combos and chain reactions to defeat opponents!</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon collection">📚</div>
+                <h3>Pokemon Collection</h3>
+                <p>Catch and collect over 800+ Pokemon from all regions. Build your dream team and discover rare legendary creatures!</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon evolution">✨</div>
+                <h3>Evolution System</h3>
+                <p>Watch your Pokemon grow stronger! Evolve them through battles and special items to unlock their true potential!</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon abilities">💥</div>
+                <h3>Special Abilities</h3>
+                <p>Each Pokemon has unique abilities! Trigger devastating special moves by creating massive combos on the puzzle board!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Character Gallery -->
+    <section class="gallery" id="pokemon">
+        <div class="section-header reveal">
+            <h2>Featured Pokemon</h2>
+            <p>Meet some of the amazing Pokemon waiting for you in the game!</p>
+        </div>
+        <div class="pokemon-grid" id="pokemonGrid">
+            <!-- Pokemon cards will be generated by JavaScript -->
+        </div>
+    </section>
+
+    <!-- Gameplay Preview -->
+    <section class="gameplay" id="gameplay">
+        <div class="section-header reveal">
+            <h2>How To Play</h2>
+            <p>Master the art of puzzle battling and become the champion!</p>
+        </div>
+        <div class="gameplay-content">
+            <div class="gameplay-text reveal">
+                <h3>Strategic Match-3 Battles</h3>
+                <p>Swipe and match Pokemon gems to charge your team's abilities. Create powerful combos to deal massive damage to your opponents!</p>
+                <ul class="gameplay-features">
+                    <li>Match 3+ gems to attack</li>
+                    <li>4-gem matches create power gems</li>
+                    <li>5-gem matches trigger special abilities</li>
+                    <li>Chain combos for bonus damage</li>
+                    <li>Use type advantages strategically</li>
+                </ul>
+                <a href="#" class="btn btn-primary" style="margin-top: 1rem;">
+                    <span>🎮</span> Try Demo
+                </a>
+            </div>
+            <div class="puzzle-board reveal" id="puzzleBoard">
+                <div class="puzzle-grid" id="puzzleGrid">
+                    <!-- Puzzle pieces will be generated by JavaScript -->
+                </div>
+            </div>
+        </div>
+        <div class="screenshots reveal">
+            <div class="screenshot-grid">
+                <div class="screenshot-card">
+                    <div class="emoji">🏆</div>
+                    <span>PvP Battles</span>
+                </div>
+                <div class="screenshot-card">
+                    <div class="emoji">🗺️</div>
+                    <span>Adventure Mode</span>
+                </div>
+                <div class="screenshot-card">
+                    <div class="emoji">🎁</div>
+                    <span>Daily Rewards</span>
+                </div>
+                <div class="screenshot-card">
+                    <div class="emoji">👥</div>
+                    <span>Guild System</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- News Section -->
+    <section class="news" id="news">
+        <div class="section-header reveal">
+            <h2>Latest News</h2>
+            <p>Stay updated with the latest events and Pokemon releases!</p>
+        </div>
+        <div class="news-grid">
+            <div class="news-card reveal">
+                <div class="news-image event">
+                    🎉
+                    <span class="news-badge">Event</span>
+                </div>
+                <div class="news-content">
+                    <div class="news-date">January 28, 2025</div>
+                    <h3 class="news-title">Lunar New Year Festival!</h3>
+                    <p class="news-desc">Celebrate the Year of the Snake with exclusive Pokemon and amazing rewards! Limited-time Shiny Rayquaza event!</p>
+                </div>
+            </div>
+            <div class="news-card reveal">
+                <div class="news-image release">
+                    ⭐
+                    <span class="news-badge">New</span>
+                </div>
+                <div class="news-content">
+                    <div class="news-date">January 25, 2025</div>
+                    <h3 class="news-title">Legendary Mewtwo Returns!</h3>
+                    <p class="news-desc">The ultimate Psychic Pokemon is back! Challenge Mewtwo in special raid battles and add it to your collection!</p>
+                </div>
+            </div>
+            <div class="news-card reveal">
+                <div class="news-image campaign">
+                    🎁
+                    <span class="news-badge">Campaign</span>
+                </div>
+                <div class="news-content">
+                    <div class="news-date">January 20, 2025</div>
+                    <h3 class="news-title">10 Million Downloads!</h3>
+                    <p class="news-desc">Thank you for your support! Log in now to claim your free Legendary Pokemon and 1000 PokéGems!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="cta-content reveal">
+            <h2>Ready to Begin Your Adventure?</h2>
+            <p>Join millions of trainers worldwide and start your Pokemon Puzzle journey today!</p>
+            <div class="cta-buttons">
+                <a href="#" class="btn btn-primary">
+                    <span>⚡</span> Download Free
+                </a>
+                <a href="#" class="btn btn-secondary">
+                    <span>📺</span> Watch Trailer
+                </a>
+            </div>
+        </div>
+        <!-- Floating Pokeballs -->
+        <div class="pokeball-float" style="top: 20%; left: 10%; animation-delay: 0s;"></div>
+        <div class="pokeball-float" style="top: 60%; left: 5%; animation-delay: 2s;"></div>
+        <div class="pokeball-float" style="top: 30%; right: 10%; animation-delay: 4s;"></div>
+        <div class="pokeball-float" style="top: 70%; right: 15%; animation-delay: 6s;"></div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>Pokemon Puzzle Quest</h4>
+                <p style="color: rgba(255,255,255,0.6); line-height: 1.6;">The ultimate match-3 puzzle adventure featuring your favorite Pokemon!</p>
+                <div class="social-links" style="margin-top: 1rem;">
+                    <a href="#" class="social-link">📘</a>
+                    <a href="#" class="social-link">🐦</a>
+                    <a href="#" class="social-link">📸</a>
+                    <a href="#" class="social-link">📺</a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#">Features</a></li>
+                    <li><a href="#">Pokemon</a></li>
+                    <li><a href="#">News</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Support</h4>
+                <ul>
+                    <li><a href="#">Help Center</a></li>
+                    <li><a href="#">Contact Us</a></li>
+                    <li><a href="#">FAQ</a></li>
+                    <li><a href="#">Community</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="#">Terms of Service</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Cookie Policy</a></li>
+                    <li><a href="#">EULA</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 Pokemon Puzzle Quest. This is a fan-made concept. Pokemon is a trademark of Nintendo/Game Freak.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Pokemon Data
+        const pokemonData = [
+            { name: 'Pikachu', type: 'electric', emoji: '⚡', rarity: 3 },
+            { name: 'Charizard', type: 'fire', emoji: '🔥', rarity: 5 },
+            { name: 'Blastoise', type: 'water', emoji: '💧', rarity: 5 },
+            { name: 'Venusaur', type: 'grass', emoji: '🌿', rarity: 5 },
+            { name: 'Mewtwo', type: 'psychic', emoji: '🔮', rarity: 5 },
+            { name: 'Gengar', type: 'ghost', emoji: '👻', rarity: 4 },
+            { name: 'Eevee', type: 'normal', emoji: '🦊', rarity: 3 },
+            { name: 'Dragonite', type: 'dragon', emoji: '🐉', rarity: 5 },
+            { name: 'Jigglypuff', type: 'normal', emoji: '🎀', rarity: 2 },
+            { name: 'Snorlax', type: 'normal', emoji: '😴', rarity: 4 },
+            { name: 'Gyarados', type: 'water', emoji: '🌊', rarity: 4 },
+            { name: 'Arcanine', type: 'fire', emoji: '🐕', rarity: 4 }
+        ];
+
+        const puzzleTypes = ['fire', 'water', 'grass', 'electric', 'psychic', 'ghost'];
+        const puzzleEmojis = {
+            fire: '🔥',
+            water: '💧',
+            grass: '🌿',
+            electric: '⚡',
+            psychic: '🔮',
+            ghost: '👻'
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Hide loader
+            setTimeout(() => {
+                document.getElementById('loader').classList.add('hidden');
+            }, 1500);
+
+            // Create particles
+            createParticles();
+
+            // Generate Pokemon cards
+            generatePokemonCards();
+
+            // Generate puzzle board
+            generatePuzzleBoard();
+
+            // Initialize scroll animations
+            initScrollAnimations();
+
+            // Initialize navbar scroll effect
+            initNavbarScroll();
+
+            // Initialize mobile menu
+            initMobileMenu();
+
+            // Add smooth scroll
+            initSmoothScroll();
+        });
+
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Generate Pokemon cards
+        function generatePokemonCards() {
+            const grid = document.getElementById('pokemonGrid');
+            pokemonData.forEach((pokemon, index) => {
+                const card = document.createElement('div');
+                card.className = 'pokemon-card reveal';
+                card.style.animationDelay = `${index * 0.1}s`;
+
+                const stars = Array(5).fill('').map((_, i) =>
+                    `<span class="star ${i < pokemon.rarity ? '' : 'empty'}">★</span>`
+                ).join('');
+
+                card.innerHTML = `
+                    <div class="pokemon-image">${pokemon.emoji}</div>
+                    <div class="pokemon-name">${pokemon.name}</div>
+                    <span class="pokemon-type type-${pokemon.type}">${pokemon.type}</span>
+                    <div class="pokemon-rarity">${stars}</div>
+                `;
+
+                card.addEventListener('click', () => {
+                    card.style.animation = 'none';
+                    card.offsetHeight; // Trigger reflow
+                    card.style.animation = 'bounce 0.5s ease';
+                });
+
+                grid.appendChild(card);
+            });
+        }
+
+        // Generate puzzle board
+        function generatePuzzleBoard() {
+            const grid = document.getElementById('puzzleGrid');
+            for (let i = 0; i < 36; i++) {
+                const type = puzzleTypes[Math.floor(Math.random() * puzzleTypes.length)];
+                const piece = document.createElement('div');
+                piece.className = `puzzle-piece ${type}`;
+                piece.textContent = puzzleEmojis[type];
+                piece.dataset.index = i;
+
+                piece.addEventListener('click', () => {
+                    piece.classList.add('matched');
+                    setTimeout(() => {
+                        piece.classList.remove('matched');
+                        const newType = puzzleTypes[Math.floor(Math.random() * puzzleTypes.length)];
+                        piece.className = `puzzle-piece ${newType}`;
+                        piece.textContent = puzzleEmojis[newType];
+                    }, 500);
+                });
+
+                grid.appendChild(piece);
+            }
+        }
+
+        // Scroll animations
+        function initScrollAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+        }
+
+        // Navbar scroll effect
+        function initNavbarScroll() {
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+            });
+        }
+
+        // Mobile menu
+        function initMobileMenu() {
+            const btn = document.getElementById('mobileMenuBtn');
+            const links = document.getElementById('navLinks');
+
+            btn.addEventListener('click', () => {
+                links.classList.toggle('active');
+            });
+
+            // Close menu when clicking a link
+            links.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    links.classList.remove('active');
+                });
+            });
+        }
+
+        // Smooth scroll
+        function initSmoothScroll() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        }
+
+        // Parallax effect on mouse move
+        document.addEventListener('mousemove', (e) => {
+            const moveX = (e.clientX - window.innerWidth / 2) * 0.01;
+            const moveY = (e.clientY - window.innerHeight / 2) * 0.01;
+
+            document.querySelectorAll('.pokemon-hero-card').forEach((card, index) => {
+                const speed = (index + 1) * 0.5;
+                card.style.transform = `translate(${moveX * speed}px, ${moveY * speed}px)`;
+            });
+        });
+    </script>
+</body>
+</html>
